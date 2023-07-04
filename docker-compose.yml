@@ -1,0 +1,14 @@
+version: "3.8"
+name: monitor
+services:
+  monitor:
+    build: .
+    environment:
+      HEARTBEAT_URL: ${HEARTBEAT_URL}
+      HOST: Potato
+      LOG_LEVEL: Debug
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    labels:
+      com.reflectivecode.dockermonitor.enable: "true"
