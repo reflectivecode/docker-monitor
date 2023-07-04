@@ -14,12 +14,13 @@ namespace ReflectiveCode.DockerMonitor;
 
 public class Program
 {
-    private static LogLevel LogLevel = LogLevel.Info;
-    private static string Host = "Docker";
     private static string DockerSocket = "/var/run/docker.sock";
-    private static string SlackWebhookUrl = "";
     private static string? HeartbeatUrl;
+    private static string Host = "Docker";
+    private static LogLevel LogLevel = LogLevel.Info;
     private static CrontabSchedule? Schedule;
+    private static string SlackWebhookUrl = "";
+    private static int Timeout = 10;
 
     public static async Task<int> Main(string[] args)
     {
@@ -28,16 +29,15 @@ public class Program
         AppDomain.CurrentDomain.ProcessExit += handler;
         try
         {
-            LogLevel = Enum.Parse<LogLevel>(Environment.GetEnvironmentVariable("LOG_LEVEL") ?? LogLevel.ToString());
-            Host = Environment.GetEnvironmentVariable("HOST") ?? Environment.MachineName;
+            var parseOptions = new CrontabSchedule.ParseOptions { IncludingSeconds = true };
+
             DockerSocket = Environment.GetEnvironmentVariable("DOCKER_SOCKET") ?? DockerSocket;
-            SlackWebhookUrl = Environment.GetEnvironmentVariable("SLACK_WEBHOOK_URL") ?? throw new Exception("Missing SLACK_WEBHOOK_URL environment variable");
             HeartbeatUrl = Environment.GetEnvironmentVariable("HEARTBEAT_URL");
-            CrontabSchedule.ParseOptions options = new CrontabSchedule.ParseOptions()
-            {
-                IncludingSeconds = true,
-            };
-            Schedule = CrontabSchedule.Parse(Environment.GetEnvironmentVariable("SCHEDULE") ?? "0 * * * * *", options);
+            Host = Environment.GetEnvironmentVariable("HOST") ?? Environment.MachineName;
+            LogLevel = Enum.Parse<LogLevel>(Environment.GetEnvironmentVariable("LOG_LEVEL") ?? LogLevel.ToString());
+            Schedule = CrontabSchedule.Parse(Environment.GetEnvironmentVariable("SCHEDULE") ?? "0 * * * * *", parseOptions);
+            SlackWebhookUrl = Environment.GetEnvironmentVariable("SLACK_WEBHOOK_URL") ?? throw new Exception("Missing SLACK_WEBHOOK_URL environment variable");
+            Timeout = Int32.Parse(Environment.GetEnvironmentVariable("TIMEOUT") ?? Timeout.ToString());
 
             var hashCode = 0;
 
@@ -76,7 +76,10 @@ public class Program
 
     private static async Task<int> MonitorAsync(int hashCode, CancellationToken cancellationToken)
     {
-        using var httpClient = new HttpClient();
+        using var httpClient = new HttpClient()
+        {
+            Timeout = TimeSpan.FromSeconds(Timeout),
+        };
         using var dockerClient = new HttpClient(new SocketsHttpHandler
         {
             ConnectCallback = async (context, token) =>
@@ -86,7 +89,10 @@ public class Program
                 await socket.ConnectAsync(endpoint);
                 return new NetworkStream(socket, ownsSocket: true);
             }
-        });
+        })
+        {
+            Timeout = TimeSpan.FromSeconds(Timeout),
+        };
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 

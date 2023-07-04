@@ -64,3 +64,11 @@ Default value: `Info`
 _Optional_
 
 Default value: `/var/run/docker.sock`
+
+## TIMEOUT
+
+_Optional_
+
+Number of seconds to wait for an HTTP response.
+
+Default value: `10`
