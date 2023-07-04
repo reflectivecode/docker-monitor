@@ -1,5 +1,7 @@
 Monitor your docker containers and get Slack alerts when they change state (e.g. fail)
 
+[![Pulls from DockerHub](https://img.shields.io/docker/pulls/reflectivecode/docker-monitor.svg)](https://hub.docker.com/r/reflectivecode/docker-monitor)
+
 # Environment variables
 
 ## SLACK_WEBHOOK_URL
