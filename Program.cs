@@ -187,6 +187,7 @@ public class Program
         }
         catch
         {
+            LogError($"Failed GET request to {url}");
             LogError($"Response code {responseMessage.StatusCode} and body {responseString}");
             throw;
         }
@@ -208,6 +209,7 @@ public class Program
         }
         catch
         {
+            LogError($"Failed POST request to {url}");
             LogError($"Response code {responseMessage.StatusCode} and body {responseString}");
             throw;
         }
@@ -226,6 +228,7 @@ public class Program
         }
         catch
         {
+            LogError($"Failed GET request to {url}");
             LogError($"Response code {responseMessage.StatusCode} and body {responseString}");
             throw;
         }
