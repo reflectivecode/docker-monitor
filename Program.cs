@@ -246,8 +246,8 @@ public class Program
     private static void Log(LogLevel level, string message)
     {
         if (level > LogLevel) return;
-        Console.Error.Write(DateTime.Now.ToString("s"));
-        Console.Error.Write(level switch
+        Console.Write(DateTime.Now.ToString("s"));
+        Console.Write(level switch
         {
             LogLevel.Error => " ERROR ",
             LogLevel.Warn => " WARN  ",
@@ -255,6 +255,6 @@ public class Program
             LogLevel.Debug => " DEBUG ",
             _ => $" {(int)level} ",
         });
-        Console.Error.WriteLine(message);
+        Console.WriteLine(message);
     }
 }
