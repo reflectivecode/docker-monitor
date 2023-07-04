@@ -24,8 +24,8 @@ public class Program
     public static async Task<int> Main(string[] args)
     {
         using var cts = new CancellationTokenSource();
-        AppDomain.CurrentDomain.ProcessExit += (sender, e) => cts.Cancel();
-
+        EventHandler handler = (sender, e) => cts.Cancel();
+        AppDomain.CurrentDomain.ProcessExit += handler;
         try
         {
             LogLevel = Enum.Parse<LogLevel>(Environment.GetEnvironmentVariable("LOG_LEVEL") ?? LogLevel.ToString());
@@ -67,6 +67,10 @@ public class Program
             LogError(e.Message);
             LogError(e.ToString());
             return 1;
+        }
+        finally
+        {
+            AppDomain.CurrentDomain.ProcessExit -= handler;
         }
     }
 
