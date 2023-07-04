@@ -44,7 +44,7 @@ public class Program
             while (true)
             {
                 var nextTime = Schedule.GetNextOccurrence(DateTime.Now);
-                
+
                 var delay = (nextTime - DateTime.Now);
                 if (delay > TimeSpan.Zero)
                 {
@@ -167,7 +167,16 @@ public class Program
         if (!String.IsNullOrEmpty(HeartbeatUrl))
         {
             var url = HeartbeatUrl.Replace("{milliseconds}", stopwatch.ElapsedMilliseconds.ToString());
-            await GetAsync(httpClient, url, cancellationToken);
+            try
+            {
+                await GetAsync(httpClient, url, cancellationToken);
+            }
+            catch (Exception e)
+            {
+                LogWarn("Failed to make heartbeat");
+                LogError(e.Message);
+                LogError(e.ToString());
+            }
         }
 
         return newHashCode;
@@ -227,21 +236,24 @@ public class Program
 
     private static async Task GetAsync(HttpClient client, string url, CancellationToken cancellationToken)
     {
-        LogDebug($"Get {url}");
+        await Retry(3, async () =>
+        {
+            LogDebug($"Get {url}");
 
-        using var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
-        using var responseMessage = await client.SendAsync(requestMessage, HttpCompletionOption.ResponseContentRead, cancellationToken);
-        var responseString = await responseMessage.Content.ReadAsStringAsync();
-        try
-        {
-            responseMessage.EnsureSuccessStatusCode();
-        }
-        catch
-        {
-            LogError($"Failed GET request to {url}");
-            LogError($"Response code {responseMessage.StatusCode} and body {responseString}");
-            throw;
-        }
+            using var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+            using var responseMessage = await client.SendAsync(requestMessage, HttpCompletionOption.ResponseContentRead, cancellationToken);
+            var responseString = await responseMessage.Content.ReadAsStringAsync();
+            try
+            {
+                responseMessage.EnsureSuccessStatusCode();
+            }
+            catch
+            {
+                LogError($"Failed GET request to {url}");
+                LogError($"Response code {responseMessage.StatusCode} and body {responseString}");
+                throw;
+            }
+        });
     }
 
     private static void LogError(string message) => Log(LogLevel.Error, message);
@@ -262,5 +274,25 @@ public class Program
             _ => $" {(int)level} ",
         });
         Console.WriteLine(message);
+    }
+
+    private static async Task Retry(int maxAttempts, Func<Task> func)
+    {
+        for (var i = 1; true; i++)
+        {
+            try
+            {
+                await func();
+            }
+            catch when (i < maxAttempts)
+            {
+                LogDebug($"Attempt {i} failed. Starting attempt {i + 1} of {maxAttempts}");
+            }
+            catch
+            {
+                LogDebug($"Attempt {i} failed. No more attempts will be made.");
+                throw;
+            }
+        }
     }
 }
