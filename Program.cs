@@ -283,6 +283,7 @@ public class Program
             try
             {
                 await func();
+                return;
             }
             catch when (i < maxAttempts)
             {
