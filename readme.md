@@ -54,7 +54,7 @@ Valid values: `Error`, `Warn`, `Info`, `Debug`
 
 Default value: `Info`
 
-### DOCKER_SOCKET
+## DOCKER_SOCKET
 
 _Optional_
 
