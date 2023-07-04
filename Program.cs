@@ -39,6 +39,8 @@ public class Program
             SlackWebhookUrl = Environment.GetEnvironmentVariable("SLACK_WEBHOOK_URL") ?? throw new Exception("Missing SLACK_WEBHOOK_URL environment variable");
             Timeout = Int32.Parse(Environment.GetEnvironmentVariable("TIMEOUT") ?? Timeout.ToString());
 
+            LogInfo("Startup");
+
             var hashCode = 0;
 
             while (true)
