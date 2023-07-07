@@ -72,3 +72,11 @@ _Optional_
 Number of seconds to wait for an HTTP response.
 
 Default value: `10`
+
+## HEALTHCHECK_PATH
+
+_Optional_
+
+Where to write the heathcheck file for monitoring container health.
+
+Default value: `/tmp/health`

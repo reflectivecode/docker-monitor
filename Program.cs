@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Sockets;
@@ -14,13 +15,18 @@ namespace ReflectiveCode.DockerMonitor;
 
 public class Program
 {
+    private static readonly Encoding UTF8 = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+    private static readonly DateTime Epoch = new DateTime(1970, 1, 1);
     private static string DockerSocket = "/var/run/docker.sock";
+    private static string? HealthCheckPath;
     private static string? HeartbeatUrl;
     private static string Host = "Docker";
     private static LogLevel LogLevel = LogLevel.Info;
     private static CrontabSchedule? Schedule;
     private static string SlackWebhookUrl = "";
     private static int Timeout = 10;
+
+    private static bool Healthy = false;
 
     public static async Task<int> Main(string[] args)
     {
@@ -32,6 +38,7 @@ public class Program
             var parseOptions = new CrontabSchedule.ParseOptions { IncludingSeconds = true };
 
             DockerSocket = Environment.GetEnvironmentVariable("DOCKER_SOCKET") ?? DockerSocket;
+            HealthCheckPath = Environment.GetEnvironmentVariable("HEALTHCHECK_PATH");
             HeartbeatUrl = Environment.GetEnvironmentVariable("HEARTBEAT_URL");
             Host = Environment.GetEnvironmentVariable("HOST") ?? Environment.MachineName;
             LogLevel = Enum.Parse<LogLevel>(Environment.GetEnvironmentVariable("LOG_LEVEL") ?? LogLevel.ToString());
@@ -46,6 +53,7 @@ public class Program
             while (true)
             {
                 var nextTime = Schedule.GetNextOccurrence(DateTime.Now);
+                await WriteHealthCheckAsync(nextTime, cts.Token);
 
                 var delay = (nextTime - DateTime.Now);
                 if (delay > TimeSpan.Zero)
@@ -56,7 +64,6 @@ public class Program
 
                 hashCode = await MonitorAsync(hashCode, cts.Token);
                 if (cts.IsCancellationRequested) return 0;
-
             }
         }
         catch (TaskCanceledException) when (cts.IsCancellationRequested)
@@ -166,19 +173,24 @@ public class Program
         stopwatch.Stop();
         LogDebug($"Completed monitoring in {stopwatch.Elapsed}");
 
-        if (!String.IsNullOrEmpty(HeartbeatUrl))
+        if (String.IsNullOrEmpty(HeartbeatUrl))
         {
-            var url = HeartbeatUrl.Replace("{milliseconds}", stopwatch.ElapsedMilliseconds.ToString());
-            try
-            {
-                await GetAsync(httpClient, url, cancellationToken);
-            }
-            catch (Exception e)
-            {
-                LogWarn("Failed to make heartbeat");
-                LogError(e.Message);
-                LogError(e.ToString());
-            }
+            Healthy = true;
+            return newHashCode;
+        }
+
+        var url = HeartbeatUrl.Replace("{milliseconds}", stopwatch.ElapsedMilliseconds.ToString());
+        try
+        {
+            await GetAsync(httpClient, url, cancellationToken);
+            Healthy = true;
+        }
+        catch (Exception e)
+        {
+            Healthy = false;
+            LogWarn("Failed to make heartbeat");
+            LogError(e.Message);
+            LogError(e.ToString());
         }
 
         return newHashCode;
@@ -197,6 +209,8 @@ public class Program
 
     private static async Task<T> GetAsync<T>(HttpClient client, string url, CancellationToken cancellationToken)
     {
+        await WriteHealthCheckAsync(Timeout, cancellationToken);
+
         LogDebug($"Get {url}");
 
         using var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
@@ -217,6 +231,8 @@ public class Program
 
     private static async Task PostJson(HttpClient client, string url, string body, CancellationToken cancellationToken)
     {
+        await WriteHealthCheckAsync(Timeout, cancellationToken);
+
         LogDebug($"Post url {url}");
         LogDebug($"Post body {body}");
 
@@ -240,6 +256,8 @@ public class Program
     {
         await Retry(3, async () =>
         {
+            await WriteHealthCheckAsync(Timeout, cancellationToken);
+
             LogDebug($"Get {url}");
 
             using var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
@@ -297,5 +315,26 @@ public class Program
                 throw;
             }
         }
+    }
+
+    private static Task WriteHealthCheckAsync(int seconds, CancellationToken cancellationToken) => WriteHealthCheckAsync(DateTime.Now.AddSeconds(seconds), cancellationToken);
+
+    private static async Task WriteHealthCheckAsync(DateTime nextAction, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(HealthCheckPath)) return;
+
+        var dir = Path.GetDirectoryName(HealthCheckPath);
+        if (dir != null && !Directory.Exists(dir))
+        {
+            LogDebug($"Creating heartbeat directory {dir}");
+            Directory.CreateDirectory(dir);
+        }
+
+        var value = Healthy
+            ? (int)(nextAction - Epoch).TotalSeconds
+            : 0;
+
+        LogDebug($"Writing heartbeat file to {HealthCheckPath} {value}");
+        await System.IO.File.WriteAllTextAsync(HealthCheckPath, $"{value}\n", UTF8, cancellationToken);
     }
 }
