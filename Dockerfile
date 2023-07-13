@@ -3,7 +3,7 @@ WORKDIR /App
 ADD *.csproj ./
 RUN dotnet restore
 COPY . ./
-RUN dotnet publish --configuration Release --output out
+RUN dotnet publish --no-restore --configuration Release --output out
 
 FROM mcr.microsoft.com/dotnet/runtime:7.0-alpine
 WORKDIR /App
