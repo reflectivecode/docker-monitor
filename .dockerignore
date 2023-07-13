@@ -2,5 +2,4 @@
 
 !*.csproj
 !*.cs
-!*.json
 !scripts/
