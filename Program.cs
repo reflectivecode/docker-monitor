@@ -260,17 +260,24 @@ public class Program
 
             LogDebug($"Get {url}");
 
-            using var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
-            using var responseMessage = await client.SendAsync(requestMessage, HttpCompletionOption.ResponseContentRead, cancellationToken);
-            var responseString = await responseMessage.Content.ReadAsStringAsync();
             try
             {
-                responseMessage.EnsureSuccessStatusCode();
+                using var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+                using var responseMessage = await client.SendAsync(requestMessage, HttpCompletionOption.ResponseContentRead, cancellationToken);
+                var responseString = await responseMessage.Content.ReadAsStringAsync();
+                try
+                {
+                    responseMessage.EnsureSuccessStatusCode();
+                }
+                catch
+                {
+                    LogError($"Response code {responseMessage.StatusCode} and body {responseString}");
+                    throw;
+                }
             }
             catch
             {
                 LogError($"Failed GET request to {url}");
-                LogError($"Response code {responseMessage.StatusCode} and body {responseString}");
                 throw;
             }
         });
