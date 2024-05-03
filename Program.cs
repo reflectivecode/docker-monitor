@@ -183,15 +183,14 @@ public class Program
         try
         {
             await GetAsync(httpClient, url, cancellationToken);
-            Healthy = true;
         }
         catch (Exception e)
         {
-            Healthy = false;
             LogWarn("Failed to make heartbeat");
-            LogError(e.Message);
-            LogError(e.ToString());
+            LogWarn(e.Message);
+            LogWarn(e.ToString());
         }
+        Healthy = true;
 
         return newHashCode;
     }
