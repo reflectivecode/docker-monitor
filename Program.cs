@@ -105,7 +105,7 @@ public class Program
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        var listUrl = $"http://localhost/v1.41/containers/json?all=true&filters={Uri.EscapeDataString("{\"label\":[\"com.reflectivecode.dockermonitor.enable=true\"]}")}";
+        var listUrl = $"http://localhost/v1.48/containers/json?all=true&filters={Uri.EscapeDataString("{\"label\":[\"com.reflectivecode.dockermonitor.enable=true\"]}")}";
         var containerList = await GetAsync<IReadOnlyList<DockerContainerList>>(dockerClient, listUrl, cancellationToken);
         LogDebug($"Listed {containerList.Count} containers");
 
@@ -119,7 +119,7 @@ public class Program
                 continue;
             }
 
-            var inspectUrl = $"http://localhost/v1.41/containers/{Uri.EscapeDataString(containerId.Id)}/json";
+            var inspectUrl = $"http://localhost/v1.48/containers/{Uri.EscapeDataString(containerId.Id)}/json";
             try
             {
                 var container = await GetAsync<DockerContainerInspect>(dockerClient, inspectUrl, cancellationToken);
