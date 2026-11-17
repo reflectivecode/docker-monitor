@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build-env
+FROM mcr.microsoft.com/dotnet/sdk:11.0-alpine AS build-env
 WORKDIR /App
 ADD *.csproj ./
 RUN dotnet restore
