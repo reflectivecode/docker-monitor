@@ -5,7 +5,7 @@ RUN dotnet restore
 COPY . ./
 RUN dotnet publish --no-restore --configuration Release --output out
 
-FROM mcr.microsoft.com/dotnet/runtime:10.0-alpine
+FROM mcr.microsoft.com/dotnet/runtime:11.0-alpine
 WORKDIR /App
 RUN apk add --no-cache tini
 COPY scripts /usr/local/bin/
